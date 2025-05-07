@@ -24,6 +24,8 @@ class TextToSpeechPlayer:
     def __init__(self, tts_config, service_config, sample_rate=24000, lang="en-us"):
         self.sample_rate = sample_rate
         self.lang = lang
+        self.voice = None
+        self.speed = None
         self.tts_config = tts_config
         self.service_config = service_config
         self.kokoro = Kokoro(MODEL_PATH, VOICES_PATH)
@@ -33,22 +35,23 @@ class TextToSpeechPlayer:
         self.interrupt_flag = False
         self.audio_playback_thread = None
 
-    def get_voice(self):
-        if not self.tts_config.get('silent_mode') or len(silent_range := self.tts_config.get('silent_time_range')) != 2:
-            return self.tts_config.get('voice'), self.tts_config.get('speed')
+    def set_voice(self):
+        silent_mode = self.tts_config.get('silent_mode')
+        silent_range = self.tts_config.get('silent_time_range')
 
-        now = datetime.now().time()
-        start = datetime.strptime(silent_range[0], "%H:%M").time()
-        end = datetime.strptime(silent_range[1], "%H:%M").time()
-        if start <= end:
-            in_silent_mode = start <= now <= end
-        else:
-            in_silent_mode = now >= start or now <= end
+        if silent_mode and isinstance(silent_range, list) and len(silent_range) == 2:
+            now = datetime.now().time()
+            start = datetime.strptime(silent_range[0], "%H:%M").time()
+            end = datetime.strptime(silent_range[1], "%H:%M").time()
+            in_silent_mode = (start <= now <= end) if start <= end else (now >= start or now <= end)
 
-        if in_silent_mode:
-            return self.tts_config.get('silent_voice'), self.tts_config.get('silent_mode_speed')
+            if in_silent_mode:
+                self.voice = self.tts_config.get('silent_voice')
+                self.speed = self.tts_config.get('silent_mode_speed')
+                return
 
-        return self.tts_config.get('voice'),  self.tts_config.get('speed')
+        self.voice = self.tts_config.get('voice')
+        self.speed = self.tts_config.get('speed')
 
     def generate_sentences(self, text):
         if not text:
@@ -58,13 +61,13 @@ class TextToSpeechPlayer:
             yield sentence.strip()
 
     def generate_audio(self, sentences):
-        voice, speed = self.get_voice()
+        self.set_voice()
         for sentence in sentences:
             if not self.is_running or self.interrupt_flag:
                 break
             print(f"Generating audio for: {sentence}")
             try:
-                audio, sr = self.kokoro.create(sentence, voice=voice, speed=speed, lang=self.lang)
+                audio, sr = self.kokoro.create(sentence, voice=self.voice, speed=self.speed, lang=self.lang)
                 if sr != self.sample_rate:
                     print(f"Warning: Sample rate mismatch.  Model generated {sr}, but using {self.sample_rate}")
                 self.audio_queue.put((audio, sentence))
