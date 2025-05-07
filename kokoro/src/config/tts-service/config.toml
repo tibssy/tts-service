@@ -1,0 +1,24 @@
+[kokoro]
+# Default voice used during normal hours
+voice = "af_heart"
+
+# Default playback speed during normal hours
+speed = 1.0
+
+# Whether to enable silent mode based on time of day
+silent_mode = true
+
+# Time range (24-hour format) during which silent mode is active
+# Can span across midnight, e.g., 22:00 to 07:00
+silent_time_range = ["22:00", "07:00"]
+
+# Voice used during silent mode (should be softer or whispering)
+silent_voice = "af_nicole"
+
+# Playback speed during silent mode
+silent_mode_speed = 1.0
+
+
+[service]
+# Special text command that triggers an interruption of playback
+interrupt_command = "__INTERRUPT__"
