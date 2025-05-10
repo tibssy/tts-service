@@ -25,3 +25,6 @@ interrupt_command = "__INTERRUPT__"
 
 # Timeout (in seconds) after which Kokoro resources are released if no activity is detected
 idle_timeout = 10
+
+# Whether to exit/restart the service when idle (to free up memory)
+exit_on_idle = false

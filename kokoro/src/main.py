@@ -31,7 +31,9 @@ class TextToSpeechPlayer:
         self.kokoro = None
         self.audio_queue = queue.Queue()
         self.is_running = False
+        self.generating_audio = True
         self.interrupt_flag = False
+        self.should_exit = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
         self.last_activity_time = time.time()
         self.kokoro_idle_timeout_seconds = self.service_config.get('idle_timeout', 60)
@@ -71,6 +73,8 @@ class TextToSpeechPlayer:
         for sentence in sentences:
             if not self.is_running or self.interrupt_flag:
                 break
+
+            self.generating_audio = True
             print(f"Generating audio for: {sentence}")
             try:
                 audio, sr = self.kokoro.create(sentence, voice=self.voice, speed=self.speed, lang=self.lang)
@@ -80,10 +84,18 @@ class TextToSpeechPlayer:
             except Exception as e:
                 print(f"Error generating audio for '{sentence}': {e}")
                 self.audio_queue.put(np.zeros(1000, dtype='float32'))
+            finally:
+                self.generating_audio = False
 
     def play_audio(self):
         while self.is_running:
-            if self.audio_queue.empty() and not self.is_generating():
+            if self.interrupt_flag and self.audio_queue.empty() and not self.generating_audio:
+                with self.audio_queue.mutex:
+                    self.audio_queue.queue.clear()
+                self.interrupt_flag = False
+                continue
+
+            if self.audio_queue.empty() and not self.generating_audio:
                 self.check_and_release_kokoro()
                 time.sleep(0.1)
                 continue
@@ -120,8 +132,8 @@ class TextToSpeechPlayer:
                         self.audio_queue.queue.clear()
                     self.interrupt_flag = False
 
-    def is_generating(self):
-        return hasattr(self, 'future') and self.future and self.future.running()
+                if self.audio_queue.empty() and self.service_config.get('exit_on_idle'):
+                    self.should_exit = True
 
     def check_and_release_kokoro(self):
         if self.kokoro is not None and time.time() - self.last_activity_time > self.kokoro_idle_timeout_seconds:
@@ -147,7 +159,6 @@ class TextToSpeechPlayer:
                         if text == self.service_config.get('interrupt_command'):
                             print("Interrupt signal received!")
                             self.interrupt_flag = True
-                            # continue
                         else:
                             sentences = self.generate_sentences(text)
                             self.generate_audio(sentences)
@@ -233,6 +244,9 @@ def main():
 
         while True:
             time.sleep(1)
+            if tts_player.should_exit:
+                print("Exiting TTS Player...")
+                break
 
     except KeyboardInterrupt:
         print("\nStopping TTS Player...")
