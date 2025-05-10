@@ -138,7 +138,6 @@ class TextToSpeechPlayer:
     def check_and_release_kokoro(self):
         if self.kokoro is not None and time.time() - self.last_activity_time > self.kokoro_idle_timeout_seconds:
             print(f"System idle for {self.kokoro_idle_timeout_seconds}s, releasing Kokoro resources...")
-            del self.kokoro
             self.kokoro = None
             gc.collect()
             print("Kokoro resources released.")
@@ -196,11 +195,6 @@ class TextToSpeechPlayer:
                 break
         self.audio_queue = queue.Queue()
         self.check_and_release_kokoro()
-
-    def __del__(self):
-        self.stop()
-        if hasattr(self, 'kokoro') and self.kokoro is not None:
-            del self.kokoro
 
 
 def load_config(config_path_override=None):
