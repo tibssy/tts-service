@@ -1,9 +1,9 @@
 [kokoro]
 # Default voice used during normal hours
-voice = "af_heart"
+voice = "am_echo"
 
 # Default playback speed during normal hours
-speed = 1.0
+speed = 1.2
 
 # Whether to enable silent mode based on time of day
 silent_mode = false
@@ -22,9 +22,6 @@ silent_mode_speed = 1.0
 [service]
 # Special text command that triggers an interruption of playback
 interrupt_command = "__INTERRUPT__"
-
-# Timeout (in seconds) after which Kokoro resources are released if no activity is detected
-idle_timeout = 10
 
 # Whether to exit/restart the service when idle (to free up memory)
 exit_on_idle = false

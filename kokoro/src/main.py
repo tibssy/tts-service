@@ -31,15 +31,12 @@ class TextToSpeechPlayer:
         self.kokoro = None
         self.audio_queue = queue.Queue()
         self.is_running = False
-        self.generating_audio = True
+        self.generating_audio = False
         self.interrupt_flag = False
         self.should_exit = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
-        self.last_activity_time = time.time()
-        self.kokoro_idle_timeout_seconds = self.service_config.get('idle_timeout', 60)
 
     def set_voice(self):
-        self.last_activity_time = time.time()
         silent_mode = self.tts_config.get('silent_mode')
         silent_range = self.tts_config.get('silent_time_range')
 
@@ -65,7 +62,6 @@ class TextToSpeechPlayer:
             yield sentence.strip()
 
     def generate_audio(self, sentences):
-        self.last_activity_time = time.time()
         self.set_voice()
         if self.kokoro is None:
             self.kokoro = Kokoro(MODEL_PATH, VOICES_PATH)
@@ -96,8 +92,8 @@ class TextToSpeechPlayer:
                 continue
 
             if self.audio_queue.empty() and not self.generating_audio:
-                self.check_and_release_kokoro()
-                time.sleep(0.1)
+                self.kokoro = None
+                gc.collect()
                 continue
 
             try:
@@ -124,7 +120,8 @@ class TextToSpeechPlayer:
             except Exception as e:
                 print(f"Error playing audio: {e}")
             finally:
-                del audio
+                print('finnally block...')
+                audio = None
                 gc.collect()
 
                 if self.interrupt_flag:
@@ -134,13 +131,6 @@ class TextToSpeechPlayer:
 
                 if self.audio_queue.empty() and self.service_config.get('exit_on_idle'):
                     self.should_exit = True
-
-    def check_and_release_kokoro(self):
-        if self.kokoro is not None and time.time() - self.last_activity_time > self.kokoro_idle_timeout_seconds:
-            print(f"System idle for {self.kokoro_idle_timeout_seconds}s, releasing Kokoro resources...")
-            self.kokoro = None
-            gc.collect()
-            print("Kokoro resources released.")
 
     def start(self):
         self.is_running = True
@@ -154,16 +144,12 @@ class TextToSpeechPlayer:
                 while self.is_running:
                     text = fifo.readline().strip()
                     if text:
-                        self.last_activity_time = time.time()
                         if text == self.service_config.get('interrupt_command'):
                             print("Interrupt signal received!")
                             self.interrupt_flag = True
                         else:
                             sentences = self.generate_sentences(text)
                             self.generate_audio(sentences)
-                    else:
-                        self.check_and_release_kokoro()
-                        time.sleep(0.01)
         except FileNotFoundError:
             print(f"Error: FIFO file not found: {INPUT_FIFO_PATH}")
             self.is_running = False
@@ -194,8 +180,8 @@ class TextToSpeechPlayer:
             except queue.Empty:
                 break
         self.audio_queue = queue.Queue()
-        self.check_and_release_kokoro()
-
+        self.kokoro = None
+        gc.collect()
 
 def load_config(config_path_override=None):
     if config_path_override:
