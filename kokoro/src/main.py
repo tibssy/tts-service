@@ -13,7 +13,6 @@ from datetime import datetime
 import concurrent.futures
 import gc
 
-
 CONFIG_PATH = 'config/tts-service/config.toml'
 MODEL_PATH = "local/share/tts-service/models/kokoro-v1.0.onnx"
 VOICES_PATH = "local/share/tts-service/models/voices-v1.0.bin"
@@ -82,37 +81,44 @@ class TextToSpeechPlayer:
                 print(f"Error generating audio for '{sentence}': {e}")
                 self.audio_queue.put(np.zeros(1000, dtype='float32'))
 
-
     def play_audio(self):
-        with sd.OutputStream(samplerate=self.sample_rate, channels=1, dtype='float32') as stream:
-            while self.is_running:
-                try:
-                    if self.interrupt_flag:
-                        while not self.audio_queue.empty():
-                            self.audio_queue.get_nowait()
-                        self.interrupt_flag = False
-                        continue
+        while self.is_running:
+            if self.audio_queue.empty() and not self.is_generating():
+                self.check_and_release_kokoro()
+                time.sleep(0.1)
+                continue
 
-                    audio, sentence = self.audio_queue.get(timeout=0.1)
+            try:
+                audio, sentence = self.audio_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
 
-                    chunk_size = int(self.sample_rate * 0.1)
+            try:
+                with sd.OutputStream(samplerate=self.sample_rate, channels=1, dtype='float32') as stream:
+                    chunk_duration = 0.03
+                    chunk_size = int(self.sample_rate * chunk_duration)
+                    interrupted = False
+
                     for start in range(0, len(audio), chunk_size):
                         if self.interrupt_flag or not self.is_running:
-                            self.write_feedback(sentence)
+                            interrupted = True
                             break
+
                         end = start + chunk_size
                         stream.write(audio[start:end])
-                except queue.Empty:
-                    self.check_and_release_kokoro()
-                    continue
-                except Exception as e:
-                    print(f"Error playing audio: {e}")
-                    break
 
-                if self.audio_queue.empty() and not self.is_generating():
-                     self.check_and_release_kokoro()
-                     if not self.is_running:
-                         break
+                    if interrupted:
+                        self.write_feedback(sentence)
+            except Exception as e:
+                print(f"Error playing audio: {e}")
+            finally:
+                del audio
+                gc.collect()
+
+                if self.interrupt_flag:
+                    with self.audio_queue.mutex:
+                        self.audio_queue.queue.clear()
+                    self.interrupt_flag = False
 
     def is_generating(self):
         return hasattr(self, 'future') and self.future and self.future.running()
@@ -141,6 +147,7 @@ class TextToSpeechPlayer:
                         if text == self.service_config.get('interrupt_command'):
                             print("Interrupt signal received!")
                             self.interrupt_flag = True
+                            # continue
                         else:
                             sentences = self.generate_sentences(text)
                             self.generate_audio(sentences)
@@ -200,6 +207,7 @@ def load_config(config_path_override=None):
 
     return config
 
+
 def create_fifo(path):
     if not os.path.exists(path):
         try:
@@ -208,6 +216,7 @@ def create_fifo(path):
         except OSError as e:
             print(f"Error creating FIFO at {path}: {e}")
             sys.exit(1)
+
 
 def main():
     config_data = load_config(CONFIG_PATH)
