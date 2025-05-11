@@ -35,9 +35,48 @@ A simple background Text-to-Speech service built with Python and the `kokoro-onn
 
 ---
 
+## Prerequisites
+
+Before you begin the installation, please ensure your system has the following packages. These are required for both the automated script and manual installation to work correctly.
+
+- **Python 3 Virtual Environment Support:**
+   - This project uses Python virtual environments to manage dependencies. You'll need the ability to create them using Python's built-in venv module.
+   - **On Arch Linux:** sudo pacman -S python-virtualenv
+   - **On Debian/Ubuntu:** sudo apt update && sudo apt install python3-venv
+   - **On Fedora:** sudo dnf install python3-virtualenv (or python3-devel which often includes venv tools)
+- **patchelf:**
+   - This utility is crucial for the Nuitka compilation step on Linux. It helps ensure the compiled binary can find its necessary shared libraries.
+   - **On Arch Linux:** sudo pacman -S patchelf
+   - **On Debian/Ubuntu:** sudo apt install patchelf
+   - **On Fedora:** sudo dnf install patchelf
+- **System Audio Libraries (for sounddevice):**
+   - The sounddevice Python library, used for audio playback, requires system audio libraries (e.g., PortAudio).
+   - **On Arch Linux:** sudo pacman -S portaudio
+   - **On Debian/Ubuntu:** sudo apt install libportaudio2
+   - **On Fedora:** sudo dnf install portaudio-devel
+- **git:**
+   - Required to clone the repository.
+   - **On Arch Linux:** sudo pacman -S git
+  - **On Debian/Ubuntu:** sudo apt install git
+  - **On Fedora:** sudo dnf install git
+- **wget:**
+   - Used to download model files during installation.
+   - **On Arch Linux:** sudo pacman -S wget
+   - **On Debian/Ubuntu:** sudo apt install wget
+   - **On Fedora:** sudo dnf install wget
+- **Python 3 and pip:**
+  - The project is built with Python 3 (python 3.13). Ensure you have a recent version installed. pip (Python's package installer) is also necessary and usually comes with Python or can be installed via your system's package manager (e.g., python3-pip).
+
+Please install these using your distribution's package manager before proceeding to the "Installation" steps.
+
+---
+
 ## Installation
 
 ### Option 1: Using the Installation Script (Recommended)
+
+    Note: Currently, the setup_kokoro.sh installation script is designed and tested primarily for Linux systems.
+    We plan to add support for macOS in the future. If you are on a different OS, please follow the Manual Installation steps.
 
 The setup_kokoro.sh script automates the following steps:
 

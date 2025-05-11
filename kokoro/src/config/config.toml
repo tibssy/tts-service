@@ -1,12 +1,12 @@
 [kokoro]
 # Default voice used during normal hours
-voice = "af_bella"
+voice = "af_heart"
 
 # Default playback speed during normal hours
-speed = 1.1
+speed = 1.0
 
 # Whether to enable silent mode based on time of day
-silent_mode = true
+silent_mode = false
 
 # Time range (24-hour format) during which silent mode is active
 # Can span across midnight, e.g., 22:00 to 07:00
