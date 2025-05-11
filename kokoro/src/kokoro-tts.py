@@ -93,10 +93,11 @@ class TextToSpeechPlayer:
             if self.audio_queue.empty() and not self.generating_audio:
                 self.kokoro = None
                 gc.collect()
+                time.sleep(1)
                 continue
 
             try:
-                audio, sentence = self.audio_queue.get(timeout=0.1)
+                audio, sentence = self.audio_queue.get(timeout=1)
             except queue.Empty:
                 continue
 
@@ -149,7 +150,7 @@ class TextToSpeechPlayer:
                             sentences = self.generate_sentences(text)
                             self.generate_audio(sentences)
                     else:
-                        time.sleep(0.01)
+                        time.sleep(0.5)
         except FileNotFoundError:
             print(f"Error: FIFO file not found: {INPUT_FIFO_PATH}")
             self.is_running = False
