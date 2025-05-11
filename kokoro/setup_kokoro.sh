@@ -23,6 +23,21 @@ download_models() {
   wget -O "$MODEL_DIR/$VOICES_BIN_FILE" "$VOICES_BIN_URL"
 }
 
+download_prebuilt_binary() {
+  echo -e "\n\e[32mFetching latest prebuilt binary from GitHub...\n***********************************************\e[0m\n"
+  API_URL="https://api.github.com/repos/tibssy/tts-service/releases/latest"
+  DOWNLOAD_URL=$(curl -s "$API_URL" | grep "browser_download_url.*$BINARY_NAME" | cut -d '"' -f 4)
+
+  if [ -z "$DOWNLOAD_URL" ]; then
+    echo -e "\e[31mError: Could not find download URL for binary.\e[0m"
+    exit 1
+  fi
+
+  wget -O "$OUTPUT_DIR/$BINARY_NAME" "$DOWNLOAD_URL"
+  chmod +x "$OUTPUT_DIR/$BINARY_NAME"
+  echo -e "\n\e[32mPrebuilt binary downloaded successfully.\n****************************************\e[0m\n"
+}
+
 builder() {
   echo -e "\n\e[32mCreate virtual environment.\n******************************\e[0m\n"
   virtualenv "$VENV_DIR"
@@ -96,6 +111,28 @@ install_files() {
 }
 
 
-builder
+echo -e "\n\e[34m==============================================="
+echo -e "  Welcome to Kokoro-TTS service Installer"
+echo -e "===============================================\e[0m"
+echo -e "\e[36mThis script will install Kokoro-TTS — a background"
+echo -e "text-to-speech service powered by Kokoro ONNX models.\e[0m"
+echo -e "\n\e[32mLet's get started!\e[0m\n"
+echo -e "\n\e[36mDo you want to build from source or use the prebuilt binary?\e[0m"
+select choice in "Build from source" "Use prebuilt binary"; do
+  case $REPLY in
+    1)
+      builder
+      break
+      ;;
+    2)
+      download_prebuilt_binary
+      break
+      ;;
+    *)
+      echo -e "\e[31mInvalid option. Please choose 1 or 2.\e[0m"
+      ;;
+  esac
+done
+
 download_models
 install_files
