@@ -1,6 +1,5 @@
 import sounddevice as sd
 from kokoro_onnx import Kokoro
-import numpy as np
 import re
 import queue
 import time
@@ -13,9 +12,10 @@ from datetime import datetime
 import concurrent.futures
 import gc
 
-CONFIG_PATH = 'config/tts-service/config.toml'
-MODEL_PATH = "local/share/tts-service/models/kokoro-v1.0.onnx"
-VOICES_PATH = "local/share/tts-service/models/voices-v1.0.bin"
+
+CONFIG_PATH = os.environ.get('CONFIG_PATH', 'config/config.toml')
+MODEL_PATH = os.environ.get('MODEL_PATH', 'models/kokoro-v1.0.onnx')
+VOICES_PATH = os.environ.get('VOICES_PATH', 'models/voices-v1.0.bin')
 INPUT_FIFO_PATH = f"/run/user/{os.geteuid()}/tts_input.fifo"
 OUTPUT_FIFO_PATH = f"/run/user/{os.geteuid()}/tts_output.fifo"
 
@@ -79,13 +79,12 @@ class TextToSpeechPlayer:
                 self.audio_queue.put((audio, sentence))
             except Exception as e:
                 print(f"Error generating audio for '{sentence}': {e}")
-                self.audio_queue.put(np.zeros(1000, dtype='float32'))
             finally:
                 self.generating_audio = False
 
     def play_audio(self):
         while self.is_running:
-            if self.interrupt_flag and self.audio_queue.empty() and not self.generating_audio:
+            if self.interrupt_flag:
                 with self.audio_queue.mutex:
                     self.audio_queue.queue.clear()
                 self.interrupt_flag = False
@@ -120,7 +119,6 @@ class TextToSpeechPlayer:
             except Exception as e:
                 print(f"Error playing audio: {e}")
             finally:
-                print('finnally block...')
                 audio = None
                 gc.collect()
 
@@ -150,6 +148,8 @@ class TextToSpeechPlayer:
                         else:
                             sentences = self.generate_sentences(text)
                             self.generate_audio(sentences)
+                    else:
+                        time.sleep(0.01)
         except FileNotFoundError:
             print(f"Error: FIFO file not found: {INPUT_FIFO_PATH}")
             self.is_running = False

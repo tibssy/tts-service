@@ -1,12 +1,12 @@
 [kokoro]
 # Default voice used during normal hours
-voice = "am_echo"
+voice = "af_bella"
 
 # Default playback speed during normal hours
-speed = 1.2
+speed = 1.1
 
 # Whether to enable silent mode based on time of day
-silent_mode = false
+silent_mode = true
 
 # Time range (24-hour format) during which silent mode is active
 # Can span across midnight, e.g., 22:00 to 07:00
@@ -24,4 +24,4 @@ silent_mode_speed = 1.0
 interrupt_command = "__INTERRUPT__"
 
 # Whether to exit/restart the service when idle (to free up memory)
-exit_on_idle = false
+exit_on_idle = true
