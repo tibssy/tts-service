@@ -128,7 +128,7 @@ class TextToSpeechPlayer:
                         self.audio_queue.queue.clear()
                     self.interrupt_flag = False
 
-                if self.audio_queue.empty() and self.service_config.get('exit_on_idle'):
+                if self.audio_queue.empty() and not self.generating_audio and self.service_config.get('exit_on_idle'):
                     self.should_exit = True
 
     def start(self):
