@@ -14,6 +14,7 @@ BINARY_NAME="kokoro-tts.bin"
 OUTPUT_DIR="$SRC_DIR"
 USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
 USER_MODEL_DIR="$HOME/.local/share/kokoro-tts/models"
+INSTALLED_BINARY="$HOME/.local/bin/$BINARY_NAME"
 
 
 command_exists() {
@@ -30,6 +31,15 @@ check_dependencies() {
     echo -e "\e[31mError: curl is not installed. Please install it and try again.\e[0m"
     exit 1
   fi
+
+  if ! command_exists systemctl; then
+    echo -e "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m"
+    exit 1
+  fi
+}
+
+is_service_running() {
+  systemctl --user is-active --quiet kokoro-tts.service
 }
 
 download_models() {
@@ -127,6 +137,54 @@ install_files() {
   echo -e "\n\e[32mInstallation complete!\n*************************\e[0m\n"
 }
 
+uninstall_service() {
+  echo -e "\n\e[33mUninstalling Kokoro-TTS service...\e[0m\n"
+  systemctl --user stop kokoro-tts.service
+  systemctl --user disable kokoro-tts.service
+  rm -f "$HOME/.config/systemd/user/kokoro-tts.service"
+  systemctl --user daemon-reload
+  rm -f "$INSTALLED_BINARY"
+  rm -rf "$USER_CONFIG_DIR"
+  rm -rf "$USER_MODEL_DIR"
+  echo -e "\e[32mKokoro-TTS service uninstalled successfully.\e[0m\n"
+}
+
+handle_existing_installation() {
+  echo -e "\n\e[33mKokoro-TTS appears to be already installed.\e[0m\n"
+
+  if is_service_running; then
+    echo -e "\e[32mThe service is currently running.\e[0m"
+  else
+    echo -e "\e[31mThe service is currently stopped.\e[0m"
+  fi
+
+  select action in "Stop service" "Restart service" "Uninstall service" "Exit"; do
+    case $action in
+      "Stop service")
+        systemctl --user stop kokoro-tts.service
+        echo -e "\e[32mService stopped.\e[0m\n"
+        break
+        ;;
+      "Restart service")
+        systemctl --user restart kokoro-tts.service
+        echo -e "\e[32mService restarted.\e[0m\n"
+        break
+        ;;
+      "Uninstall service")
+        uninstall_service
+        break
+        ;;
+      "Exit")
+        echo -e "\e[32mExiting.\e[0m\n"
+        exit 0
+        ;;
+      *)
+        echo -e "\e[31mInvalid option.\e[0m"
+        ;;
+    esac
+  done
+}
+
 
 echo -e "\n\e[34m==============================================="
 echo -e "  Welcome to Kokoro-TTS service Installer"
@@ -137,6 +195,12 @@ echo -e "\n\e[32mLet's get started!\e[0m\n"
 
 # Check dependencies before proceeding
 check_dependencies
+
+# Check for existing installation
+if [ -f "$INSTALLED_BINARY" ]; then
+  handle_existing_installation
+  exit 0
+fi
 
 echo -e "\n\e[36mDo you want to build from source or use the prebuilt binary?\e[0m"
 select choice in "Build from source" "Use prebuilt binary"; do
