@@ -41,29 +41,34 @@ Before you begin the installation, please ensure your system has the following p
 
 - **Python 3 Virtual Environment Support:**
    - This project uses Python virtual environments to manage dependencies. You'll need the ability to create them using Python's built-in venv module.
-   - **On Arch Linux:** sudo pacman -S python-virtualenv
-   - **On Debian/Ubuntu:** sudo apt update && sudo apt install python3-venv
-   - **On Fedora:** sudo dnf install python3-virtualenv (or python3-devel which often includes venv tools)
+   - **On Arch Linux:** `sudo pacman -S python-virtualenv`
+   - **On Debian/Ubuntu:** `sudo apt update && sudo apt install python3-venv`
+   - **On Fedora:** `sudo dnf install python3-virtualenv` (or `python3-devel` which often includes venv tools)
 - **patchelf:**
    - This utility is crucial for the Nuitka compilation step on Linux. It helps ensure the compiled binary can find its necessary shared libraries.
-   - **On Arch Linux:** sudo pacman -S patchelf
-   - **On Debian/Ubuntu:** sudo apt install patchelf
-   - **On Fedora:** sudo dnf install patchelf
+   - **On Arch Linux:** `sudo pacman -S patchelf`
+   - **On Debian/Ubuntu:** `sudo apt install patchelf`
+   - **On Fedora:** `sudo dnf install patchelf`
 - **System Audio Libraries (for sounddevice):**
    - The sounddevice Python library, used for audio playback, requires system audio libraries (e.g., PortAudio).
-   - **On Arch Linux:** sudo pacman -S portaudio
-   - **On Debian/Ubuntu:** sudo apt install libportaudio2
-   - **On Fedora:** sudo dnf install portaudio-devel
+   - **On Arch Linux:** `sudo pacman -S portaudio`
+   - **On Debian/Ubuntu:** `sudo apt install libportaudio2`
+   - **On Fedora:** `sudo dnf install portaudio-devel`
 - **git:**
    - Required to clone the repository.
-   - **On Arch Linux:** sudo pacman -S git
-  - **On Debian/Ubuntu:** sudo apt install git
-  - **On Fedora:** sudo dnf install git
+   - **On Arch Linux:** `sudo pacman -S git`
+   - **On Debian/Ubuntu:** `sudo apt install git`
+   - **On Fedora:** `sudo dnf install git`
 - **wget:**
    - Used to download model files during installation.
-   - **On Arch Linux:** sudo pacman -S wget
-   - **On Debian/Ubuntu:** sudo apt install wget
-   - **On Fedora:** sudo dnf install wget
+   - **On Arch Linux:** `sudo pacman -S wget`
+   - **On Debian/Ubuntu:** `sudo apt install wget`
+   - **On Fedora:** `sudo dnf install wget`
+- **curl:**
+   - Used to download binary file during installation.
+   - **On Arch Linux:** `sudo pacman -S curl`
+   - **On Debian/Ubuntu:** `sudo apt install curl`
+   - **On Fedora:** `sudo dnf install curl`
 - **Python 3 and pip:**
   - The project is built with Python 3 (python 3.13). Ensure you have a recent version installed. pip (Python's package installer) is also necessary and usually comes with Python or can be installed via your system's package manager (e.g., python3-pip).
 

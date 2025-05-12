@@ -15,6 +15,23 @@ OUTPUT_DIR="$SRC_DIR"
 USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
 USER_MODEL_DIR="$HOME/.local/share/kokoro-tts/models"
 
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+check_dependencies() {
+  if ! command_exists wget; then
+    echo -e "\e[31mError: wget is not installed. Please install it and try again.\e[0m"
+    exit 1
+  fi
+
+  if ! command_exists curl; then
+    echo -e "\e[31mError: curl is not installed. Please install it and try again.\e[0m"
+    exit 1
+  fi
+}
+
 download_models() {
   echo -e "\n\e[32mCreating models directory\n******************************\e[0m\n"
   mkdir -p "$MODEL_DIR"
@@ -117,6 +134,10 @@ echo -e "===============================================\e[0m"
 echo -e "\e[36mThis script will install Kokoro-TTS — a background"
 echo -e "text-to-speech service powered by Kokoro ONNX models.\e[0m"
 echo -e "\n\e[32mLet's get started!\e[0m\n"
+
+# Check dependencies before proceeding
+check_dependencies
+
 echo -e "\n\e[36mDo you want to build from source or use the prebuilt binary?\e[0m"
 select choice in "Build from source" "Use prebuilt binary"; do
   case $REPLY in
