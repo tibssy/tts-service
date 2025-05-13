@@ -3,7 +3,7 @@ Description=Kokoro TTS Service (User)
 After=default.target
 
 [Service]
-ExecStart=%h/.local/bin/kokoro-tts.bin
+ExecStart=%h/.local/bin/kokoro-tts-linux-x64.bin
 Restart=always
 RestartSec=1
 Environment=CONFIG_PATH=%h/.config/kokoro-tts/config.toml
