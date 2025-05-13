@@ -11,13 +11,21 @@ import tomllib
 from datetime import datetime
 import concurrent.futures
 import gc
+import platform
+import tempfile
 
 
 CONFIG_PATH = os.environ.get('CONFIG_PATH', 'config/config.toml')
 MODEL_PATH = os.environ.get('MODEL_PATH', 'models/kokoro-v1.0.onnx')
 VOICES_PATH = os.environ.get('VOICES_PATH', 'models/voices-v1.0.bin')
-INPUT_FIFO_PATH = f"/run/user/{os.geteuid()}/tts_input.fifo"
-OUTPUT_FIFO_PATH = f"/run/user/{os.geteuid()}/tts_output.fifo"
+
+if platform.system() == "Darwin":
+    TEMP_DIR = tempfile.gettempdir()
+else:
+    TEMP_DIR = f"/run/user/{os.geteuid()}"
+
+INPUT_FIFO_PATH = os.path.join(TEMP_DIR, "tts_input.fifo")
+OUTPUT_FIFO_PATH = os.path.join(TEMP_DIR, "tts_output.fifo")
 
 
 class TextToSpeechPlayer:
