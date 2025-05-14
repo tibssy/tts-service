@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build-linux:
+  build-linux-x64:
     runs-on: ubuntu-latest
 
     permissions:
@@ -64,7 +64,121 @@ jobs:
         tag_name: ${{ github.ref_name }}
         files: kokoro/src/kokoro-tts-linux-x64.bin
 
-  build-macos:
+  build-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install system dependencies
+      run: sudo apt-get update && sudo apt-get install -y espeak-ng patchelf
+
+    - name: Install Python dependencies
+      working-directory: kokoro
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install --upgrade phonemizer-fork
+        pip install nuitka
+
+    - name: Determine site-packages path
+      id: site_packages
+      run: |
+        SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+        echo "site_packages=$SITE_PACKAGES" >> $GITHUB_OUTPUT
+
+    - name: Build binary with Nuitka (Linux)
+      working-directory: kokoro
+      run: |
+        SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
+        python -m nuitka --onefile \
+          --output-dir=src \
+          --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
+          --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
+          --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
+          --include-data-dir="$SITE_PACKAGES/espeakng_loader/espeak-ng-data"=espeakng_loader/espeak-ng-data \
+          --include-data-files="$SITE_PACKAGES/espeakng_loader/libespeak-ng.so"=espeakng_loader/libespeak-ng.so \
+          --include-distribution-metadata=kokoro-onnx \
+          --lto=yes \
+          --python-flag=no_site \
+          src/kokoro-tts.py
+
+    - name: Rename Linux binary
+      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-linux-arm64.bin
+
+    - name: Upload binary to release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+        files: kokoro/src/kokoro-tts-linux-arm64.bin
+
+  build-macos-x64:
+    runs-on: macos-13
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install Python dependencies
+      working-directory: kokoro
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install --upgrade phonemizer-fork
+        pip install nuitka
+
+    - name: Determine site-packages path
+      id: site_packages
+      run: |
+        SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+        echo "site_packages=$SITE_PACKAGES" >> $GITHUB_OUTPUT
+
+    - name: Build binary with Nuitka (macOS)
+      working-directory: kokoro
+      run: |
+        SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
+        python -m nuitka --onefile \
+          --output-dir=src \
+          --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
+          --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
+          --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
+          --include-data-dir="$SITE_PACKAGES/espeakng_loader/espeak-ng-data"=espeakng_loader/espeak-ng-data \
+          --include-data-files="$SITE_PACKAGES/espeakng_loader/libespeak-ng.dylib"=espeakng_loader/libespeak-ng.dylib \
+          --include-distribution-metadata=kokoro-onnx \
+          --assume-yes-for-downloads \
+          --lto=yes \
+          --python-flag=no_site \
+          src/kokoro-tts.py
+
+    - name: Rename macOS binary
+      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-macos-x64.bin
+
+    - name: Upload binary to release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Release ${{ github.ref_name }}
+        tag_name: ${{ github.ref_name }}
+        files: kokoro/src/kokoro-tts-macos-x64.bin
+
+  build-macos-arm64:
     runs-on: macos-latest
 
     permissions:
@@ -105,16 +219,17 @@ jobs:
           --include-data-dir="$SITE_PACKAGES/espeakng_loader/espeak-ng-data"=espeakng_loader/espeak-ng-data \
           --include-data-files="$SITE_PACKAGES/espeakng_loader/libespeak-ng.dylib"=espeakng_loader/libespeak-ng.dylib \
           --include-distribution-metadata=kokoro-onnx \
+          --assume-yes-for-downloads \
           --lto=yes \
           --python-flag=no_site \
           src/kokoro-tts.py
 
-    - name: Rename macOS binary
-      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-macos-x64.bin
+    - name: Rename macOS ARM64 binary
+      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-macos-arm64.bin
 
     - name: Upload binary to release
       uses: softprops/action-gh-release@v2
       with:
         name: Release ${{ github.ref_name }}
         tag_name: ${{ github.ref_name }}
-        files: kokoro/src/kokoro-tts-macos-x64.bin
+        files: kokoro/src/kokoro-tts-macos-arm64.bin
