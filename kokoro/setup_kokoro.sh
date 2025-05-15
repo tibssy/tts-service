@@ -9,12 +9,7 @@ VOICES_BIN_URL="https://github.com/thewh1teagle/kokoro-onnx/releases/download/mo
 KOKORO_ONNX_FILE="kokoro-v1.0.onnx"
 VOICES_BIN_FILE="voices-v1.0.bin"
 CONFIG_FILE="${SRC_DIR}/config/config.toml"
-SERVICE_FILE="${SRC_DIR}/service/kokoro-tts.service"
-BINARY_NAME="kokoro-tts-linux-x64.bin"
 OUTPUT_DIR="$SRC_DIR"
-USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
-USER_MODEL_DIR="$HOME/.local/share/kokoro-tts/models"
-INSTALLED_BINARY="$HOME/.local/bin/$BINARY_NAME"
 
 
 command_exists() {
@@ -32,7 +27,7 @@ check_dependencies() {
     exit 1
   fi
 
-  if ! command_exists systemctl; then
+  if ! command_exists $SERVICE_MANAGER; then
     echo -e "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m"
     exit 1
   fi
@@ -67,13 +62,12 @@ download_prebuilt_binary() {
 
 builder() {
   echo -e "\n\e[32mCreate virtual environment.\n******************************\e[0m\n"
-  virtualenv "$VENV_DIR"
+  python3 -m venv "$VENV_DIR"
   source "$VENV_DIR/bin/activate"
   if [ -n "$VIRTUAL_ENV" ]; then
       echo -e "\n\e[32mVirtual environment is active.\n******************************\e[0m\n"
       echo -e "\e[32mPip Upgrade\n***********\e[0m"
       pip3 install --upgrade pip
-      pip3 --version
 
       # Dynamically determine Python version
       PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
@@ -87,12 +81,14 @@ builder() {
       echo -e "\n\e[32mBuild Binary\n************\e[0m"
       nuitka --onefile \
              --output-dir="$OUTPUT_DIR" \
+             --output-filename="$BINARY_NAME" \
              --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
              --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
              --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
              --include-data-dir="$SITE_PACKAGES/espeakng_loader/espeak-ng-data"=espeakng_loader/espeak-ng-data \
-             --include-data-files="$SITE_PACKAGES/espeakng_loader/libespeak-ng.so"=espeakng_loader/libespeak-ng.so \
+             --include-data-files="$SITE_PACKAGES/espeakng_loader/libespeak-ng.$SHARED_LIB_EXT"=espeakng_loader/libespeak-ng.$SHARED_LIB_EXT \
              --include-distribution-metadata=kokoro-onnx \
+             --assume-yes-for-downloads \
              --lto=yes \
              --python-flag=no_site \
              "$SRC_DIR/kokoro-tts.py"
@@ -185,6 +181,52 @@ handle_existing_installation() {
   done
 }
 
+set_globals() {
+  OS=$(uname -s)
+  ARCH=$(uname -m)
+
+  echo -e "\n\e[34mSystem Information:\e[0m"
+  echo -e "\e[32mOperating System: ${OS}\e[0m"
+  echo -e "\e[32mArchitecture: ${ARCH}\e[0m\n"
+
+  if [[ "$OS" == "Linux" ]]; then
+      if [[ "$ARCH" == "x86_64" ]]; then
+          BINARY_NAME="kokoro-tts-linux-x64.bin"
+          SERVICE_FILE="${SRC_DIR}/service/x64/kokoro-tts.service"
+      elif [[ "$ARCH" == "aarch64" ]]; then
+          BINARY_NAME="kokoro-tts-linux-arm64.bin"
+          SERVICE_FILE="${SRC_DIR}/service/arm64/kokoro-tts.service"
+      else
+          echo -e "\e[31mError: Unsupported Linux architecture: $ARCH\e[0m"
+          exit 1
+      fi
+      USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
+      USER_MODEL_DIR="$HOME/.local/share/kokoro-tts/models"
+      INSTALLED_BINARY="$HOME/.local/bin/$BINARY_NAME"
+      SERVICE_MANAGER="systemctl"
+      SHARED_LIB_EXT="so"
+  elif [[ "$OS" == "Darwin" ]]; then
+      if [[ "$ARCH" == "x86_64" ]]; then
+          BINARY_NAME="kokoro-tts-macos-x64.bin"
+          SERVICE_FILE="${SRC_DIR}/service/x64/com.github.tibssy.kokoro-tts.plist"
+      elif [[ "$ARCH" == "arm64" ]]; then
+          BINARY_NAME="kokoro-tts-macos-arm64.bin"
+          SERVICE_FILE="${SRC_DIR}/service/arm64/com.github.tibssy.kokoro-tts.plist"
+      else
+          echo -e "\e[31mError: Unsupported macOS architecture: $ARCH\e[0m"
+          exit 1
+      fi
+      USER_CONFIG_DIR="$HOME/Library/Application Support/kokoro-tts"
+      USER_MODEL_DIR="$HOME/Library/Application Support/kokoro-tts/models"
+      INSTALLED_BINARY="$HOME/bin/kokoro-tts/$BINARY_NAME"
+      SERVICE_MANAGER="launchctl"
+      SHARED_LIB_EXT="dylib"
+  else
+      echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
+      exit 1
+  fi
+}
+
 
 echo -e "\n\e[34m==============================================="
 echo -e "  Welcome to Kokoro-TTS service Installer"
@@ -193,8 +235,7 @@ echo -e "\e[36mThis script will install Kokoro-TTS — a background"
 echo -e "text-to-speech service powered by Kokoro ONNX models.\e[0m"
 echo -e "\n\e[32mLet's get started!\e[0m\n"
 
-# Check dependencies before proceeding
-check_dependencies
+set_globals
 
 # Check for existing installation
 if [ -f "$INSTALLED_BINARY" ]; then
@@ -219,5 +260,6 @@ select choice in "Build from source" "Use prebuilt binary"; do
   esac
 done
 
+check_dependencies
 download_models
 install_files

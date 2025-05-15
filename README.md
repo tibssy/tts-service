@@ -286,5 +286,3 @@ All required Python packages are listed in kokoro/requirements.txt. Key dependen
 *   **Clearer Language:** Improved clarity and conciseness throughout the document.
 *   **Dependency Note:** Retained the note about system audio libraries for `sounddevice`.
 *   **Correct file paths**: All the file paths are corrected to reflect the project architecture.
-
-This revised README provides a comprehensive guide for installing and using your Kokoro TTS Service, making it easier for others to set it up and run it successfully.

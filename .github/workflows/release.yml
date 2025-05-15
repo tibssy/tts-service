@@ -44,6 +44,7 @@ jobs:
         SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
         python -m nuitka --onefile \
           --output-dir=src \
+          --output-filename=kokoro-tts-linux-x64.bin \
           --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
@@ -53,9 +54,6 @@ jobs:
           --lto=yes \
           --python-flag=no_site \
           src/kokoro-tts.py
-
-    - name: Rename Linux binary
-      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-linux-x64.bin
 
     - name: Upload binary to release
       uses: softprops/action-gh-release@v2
@@ -102,6 +100,7 @@ jobs:
         SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
         python -m nuitka --onefile \
           --output-dir=src \
+          --output-filename=kokoro-tts-linux-arm64.bin \
           --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
@@ -111,9 +110,6 @@ jobs:
           --lto=yes \
           --python-flag=no_site \
           src/kokoro-tts.py
-
-    - name: Rename Linux binary
-      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-linux-arm64.bin
 
     - name: Upload binary to release
       uses: softprops/action-gh-release@v2
@@ -157,6 +153,7 @@ jobs:
         SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
         python -m nuitka --onefile \
           --output-dir=src \
+          --output-filename=kokoro-tts-macos-x64.bin \
           --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
@@ -167,9 +164,6 @@ jobs:
           --lto=yes \
           --python-flag=no_site \
           src/kokoro-tts.py
-
-    - name: Rename macOS binary
-      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-macos-x64.bin
 
     - name: Upload binary to release
       uses: softprops/action-gh-release@v2
@@ -213,6 +207,7 @@ jobs:
         SITE_PACKAGES="${{ steps.site_packages.outputs.site_packages }}"
         python -m nuitka --onefile \
           --output-dir=src \
+          --output-filename=kokoro-tts-macos-arm64.bin \
           --include-data-files="$SITE_PACKAGES/kokoro_onnx/config.json"=kokoro_onnx/config.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/index.json"=language_tags/data/json/index.json \
           --include-data-files="$SITE_PACKAGES/language_tags/data/json/registry.json"=language_tags/data/json/registry.json \
@@ -223,9 +218,6 @@ jobs:
           --lto=yes \
           --python-flag=no_site \
           src/kokoro-tts.py
-
-    - name: Rename macOS ARM64 binary
-      run: mv kokoro/src/kokoro-tts.bin kokoro/src/kokoro-tts-macos-arm64.bin
 
     - name: Upload binary to release
       uses: softprops/action-gh-release@v2
