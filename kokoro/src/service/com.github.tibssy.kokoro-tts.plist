@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.example.kokoro-tts-user</string>
+    <string>com.github.tibssy.kokoro-tts</string>
 
     <key>Program</key>
-    <string>${HOME}/bin/kokoro-tts/kokoro-tts-macos-x64.bin</string>
+    <string><USER_BINARY></string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -15,22 +15,22 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/tmp/com.example.kokoro-tts.stdout.log</string>
+    <string>/tmp/com.github.tibssy.kokoro-tts.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/tmp/com.example.kokoro-tts.stderr.log</string>
+    <string>/tmp/com.github.tibssy.kokoro-tts.stderr.log</string>
 
     <key>EnvironmentVariables</key>
     <dict>
         <key>CONFIG_PATH</key>
-        <string>${HOME}/Library/Application Support/kokoro-tts/config.toml</string>
+        <string><USER_CONFIG_DIR>/config.toml</string>
         <key>MODEL_PATH</key>
-        <string>${HOME}/Library/Application Support/kokoro-tts/models/kokoro-v1.0.onnx</string>
+        <string><USER_MODEL_DIR>/kokoro-v1.0.onnx</string>
         <key>VOICES_PATH</key>
-        <string>${HOME}/Library/Application Support/kokoro-tts/models/voices-v1.0.bin</string>
+        <string><USER_MODEL_DIR>/voices-v1.0.bin</string>
     </dict>
 
     <key>WorkingDirectory</key>
-    <string>${HOME}</string>
+    <string><WORKING_DIR></string>
 </dict>
 </plist>

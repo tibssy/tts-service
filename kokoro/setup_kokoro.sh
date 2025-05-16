@@ -109,7 +109,7 @@ install_files() {
 
   # copy config
   mkdir -p "$USER_CONFIG_DIR"
-  cp "$CONFIG_FILE" "$USER_CONFIG_DIR/config.toml"
+  cp "$CONFIG_FILE" "$USER_CONFIG_DIR"
 
   # copy models
   mkdir -p "$USER_MODEL_DIR"
@@ -118,17 +118,29 @@ install_files() {
 
   # copy binary
   mkdir -p "$HOME/.local/bin"
-  cp "$OUTPUT_DIR/$BINARY_NAME" "$HOME/.local/bin/$BINARY_NAME"
-  chmod +x "$HOME/.local/bin/$BINARY_NAME"
+  cp "$OUTPUT_DIR/$BINARY_NAME" "$USER_BINARY"
+  chmod +x "$USER_BINARY"
 
   # copy service file
-  mkdir -p "$HOME/.config/systemd/user"
-  cp "$SERVICE_FILE" "$HOME/.config/systemd/user/kokoro-tts.service"
+  mkdir -p "$SERVICE_DESTINATION"
+  cp "${SRC_DIR}/service/$SERVICE_FILE" "$SERVICE_DESTINATION"
 
-  # start service
-  systemctl --user daemon-reload
-  systemctl --user enable kokoro-tts.service
-  systemctl --user start kokoro-tts.service
+  # edit service file and start service
+  sed -i "s|<USER_BINARY>|$USER_BINARY|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+  sed -i "s|<USER_CONFIG_DIR>|$USER_CONFIG_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+  sed -i "s|<USER_MODEL_DIR>|$USER_MODEL_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+
+  if [[ "$OS" == "Linux" ]]; then
+    systemctl --user daemon-reload
+    systemctl --user enable $SERVICE_FILE
+    systemctl --user start $SERVICE_FILE
+  elif [[ "$OS" == "Darwin" ]]; then
+    sed -i "s|<WORKING_DIR>|$HOME|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+    launchctl load "$SERVICE_DESTINATION/$SERVICE_FILE"
+  else
+    echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
+    exit 1
+  fi
 
   echo -e "\n\e[32mInstallation complete!\n*************************\e[0m\n"
 }
@@ -137,9 +149,9 @@ uninstall_service() {
   echo -e "\n\e[33mUninstalling Kokoro-TTS service...\e[0m\n"
   systemctl --user stop kokoro-tts.service
   systemctl --user disable kokoro-tts.service
-  rm -f "$HOME/.config/systemd/user/kokoro-tts.service"
+  rm -f "$SERVICE_DESTINATION/$SERVICE_FILE"
   systemctl --user daemon-reload
-  rm -f "$INSTALLED_BINARY"
+  rm -f "$USER_BINARY"
   rm -rf "$USER_CONFIG_DIR"
   rm -rf "$USER_MODEL_DIR"
   echo -e "\e[32mKokoro-TTS service uninstalled successfully.\e[0m\n"
@@ -192,35 +204,35 @@ set_globals() {
   if [[ "$OS" == "Linux" ]]; then
       if [[ "$ARCH" == "x86_64" ]]; then
           BINARY_NAME="kokoro-tts-linux-x64.bin"
-          SERVICE_FILE="${SRC_DIR}/service/x64/kokoro-tts.service"
       elif [[ "$ARCH" == "aarch64" ]]; then
           BINARY_NAME="kokoro-tts-linux-arm64.bin"
-          SERVICE_FILE="${SRC_DIR}/service/arm64/kokoro-tts.service"
       else
           echo -e "\e[31mError: Unsupported Linux architecture: $ARCH\e[0m"
           exit 1
       fi
       USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
       USER_MODEL_DIR="$HOME/.local/share/kokoro-tts/models"
-      INSTALLED_BINARY="$HOME/.local/bin/$BINARY_NAME"
+      USER_BINARY="$HOME/.local/bin/$BINARY_NAME"
       SERVICE_MANAGER="systemctl"
       SHARED_LIB_EXT="so"
+      SERVICE_FILE="kokoro-tts.service"
+      SERVICE_DESTINATION="$HOME/.config/systemd/user"
   elif [[ "$OS" == "Darwin" ]]; then
       if [[ "$ARCH" == "x86_64" ]]; then
           BINARY_NAME="kokoro-tts-macos-x64.bin"
-          SERVICE_FILE="${SRC_DIR}/service/x64/com.github.tibssy.kokoro-tts.plist"
       elif [[ "$ARCH" == "arm64" ]]; then
           BINARY_NAME="kokoro-tts-macos-arm64.bin"
-          SERVICE_FILE="${SRC_DIR}/service/arm64/com.github.tibssy.kokoro-tts.plist"
       else
           echo -e "\e[31mError: Unsupported macOS architecture: $ARCH\e[0m"
           exit 1
       fi
       USER_CONFIG_DIR="$HOME/Library/Application Support/kokoro-tts"
       USER_MODEL_DIR="$HOME/Library/Application Support/kokoro-tts/models"
-      INSTALLED_BINARY="$HOME/bin/kokoro-tts/$BINARY_NAME"
+      USER_BINARY="$HOME/.local/bin/$BINARY_NAME"
       SERVICE_MANAGER="launchctl"
       SHARED_LIB_EXT="dylib"
+      SERVICE_FILE="com.github.tibssy.kokoro-tts.plist"
+      SERVICE_DESTINATION="$HOME/Library/LaunchAgents"
   else
       echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
       exit 1
@@ -238,7 +250,7 @@ echo -e "\n\e[32mLet's get started!\e[0m\n"
 set_globals
 
 # Check for existing installation
-if [ -f "$INSTALLED_BINARY" ]; then
+if [ -f "$USER_BINARY" ]; then
   handle_existing_installation
   exit 0
 fi

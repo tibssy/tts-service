@@ -1,0 +1,14 @@
+[Unit]
+Description=Kokoro TTS Service (User)
+After=default.target
+
+[Service]
+ExecStart=<USER_BINARY>
+Restart=always
+RestartSec=1
+Environment=CONFIG_PATH=<USER_CONFIG_DIR>/config.toml
+Environment=MODEL_PATH=<USER_MODEL_DIR>/kokoro-v1.0.onnx
+Environment=VOICES_PATH=<USER_MODEL_DIR>/voices-v1.0.bin
+
+[Install]
+WantedBy=default.target
