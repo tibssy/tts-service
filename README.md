@@ -20,6 +20,10 @@ A simple background Text-to-Speech service built with Python and the `kokoro-onn
 
 ---
 
+https://github.com/user-attachments/assets/60423482-ab61-4676-b078-bc6b0468a983
+
+---
+
 ## Project Structure
 
 ```
