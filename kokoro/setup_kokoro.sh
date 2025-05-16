@@ -27,14 +27,29 @@ check_dependencies() {
     exit 1
   fi
 
-  if ! command_exists $SERVICE_MANAGER; then
-    echo -e "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m"
-    exit 1
+  if ! command_exists "$SERVICE_MANAGER"; then
+    if [[ "$OS" == "Linux" ]]; then
+      echo -e "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m"
+      exit 1
+    elif [[ "$OS" == "Darwin" ]]; then
+      echo -e "\e[31mError: launchctl is not installed.  Launchd is required for service management.\e[0m"
+      exit 1
+    else
+      echo -e "\e[31mError: Unsupported OS.\e[0m"
+      exit 1
+    fi
   fi
 }
 
 is_service_running() {
-  systemctl --user is-active --quiet kokoro-tts.service
+  if [[ "$OS" == "Linux" ]]; then
+    $SERVICE_MANAGER --user is-active --quiet kokoro-tts.service
+  elif [[ "$OS" == "Darwin" ]]; then
+      $SERVICE_MANAGER list com.github.tibssy.kokoro-tts > /dev/null 2>&1
+      return $?
+  else
+    return 1
+  fi
 }
 
 download_models() {
@@ -131,12 +146,12 @@ install_files() {
   perl -pi -e "s|<USER_MODEL_DIR>|$USER_MODEL_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
 
   if [[ "$OS" == "Linux" ]]; then
-    systemctl --user daemon-reload
-    systemctl --user enable $SERVICE_FILE
-    systemctl --user start $SERVICE_FILE
+    $SERVICE_MANAGER --user daemon-reload
+    $SERVICE_MANAGER --user enable "$SERVICE_FILE"
+    $SERVICE_MANAGER --user start "$SERVICE_FILE"
   elif [[ "$OS" == "Darwin" ]]; then
     perl -pi -e "s|<WORKING_DIR>|$HOME|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
-    launchctl load "$SERVICE_DESTINATION/$SERVICE_FILE"
+    $SERVICE_MANAGER load "$SERVICE_DESTINATION/$SERVICE_FILE"
   else
     echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
     exit 1
@@ -147,10 +162,20 @@ install_files() {
 
 uninstall_service() {
   echo -e "\n\e[33mUninstalling Kokoro-TTS service...\e[0m\n"
-  systemctl --user stop kokoro-tts.service
-  systemctl --user disable kokoro-tts.service
-  rm -f "$SERVICE_DESTINATION/$SERVICE_FILE"
-  systemctl --user daemon-reload
+
+  if [[ "$OS" == "Linux" ]]; then
+    $SERVICE_MANAGER --user stop kokoro-tts.service
+    $SERVICE_MANAGER --user disable kokoro-tts.service
+    rm -f "$SERVICE_DESTINATION/$SERVICE_FILE"
+    $SERVICE_MANAGER --user daemon-reload
+  elif [[ "$OS" == "Darwin" ]]; then
+    $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
+    rm -f "$SERVICE_DESTINATION/$SERVICE_FILE"
+  else
+    echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
+    exit 1
+  fi
+
   rm -f "$USER_BINARY"
   rm -rf "$USER_CONFIG_DIR"
   rm -rf "$USER_MODEL_DIR"
@@ -169,12 +194,22 @@ handle_existing_installation() {
   select action in "Stop service" "Restart service" "Uninstall service" "Exit"; do
     case $action in
       "Stop service")
-        systemctl --user stop kokoro-tts.service
+        if [[ "$OS" == "Linux" ]]; then
+          $SERVICE_MANAGER --user stop kokoro-tts.service
+        elif [[ "$OS" == "Darwin" ]]; then
+          $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
+        fi
         echo -e "\e[32mService stopped.\e[0m\n"
         break
         ;;
       "Restart service")
-        systemctl --user restart kokoro-tts.service
+        if [[ "$OS" == "Linux" ]]; then
+          $SERVICE_MANAGER --user restart kokoro-tts.service
+        elif [[ "$OS" == "Darwin" ]]; then
+          # launchctl stop is deprecated; stop only before start as a safeguard
+          $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
+          $SERVICE_MANAGER load "$SERVICE_DESTINATION/$SERVICE_FILE"
+        fi
         echo -e "\e[32mService restarted.\e[0m\n"
         break
         ;;
