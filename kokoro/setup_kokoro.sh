@@ -126,16 +126,16 @@ install_files() {
   cp "${SRC_DIR}/service/$SERVICE_FILE" "$SERVICE_DESTINATION"
 
   # edit service file and start service
-  sed -i "s|<USER_BINARY>|$USER_BINARY|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
-  sed -i "s|<USER_CONFIG_DIR>|$USER_CONFIG_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
-  sed -i "s|<USER_MODEL_DIR>|$USER_MODEL_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+  perl -pi -e "s|<USER_BINARY>|$USER_BINARY|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+  perl -pi -e "s|<USER_CONFIG_DIR>|$USER_CONFIG_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+  perl -pi -e "s|<USER_MODEL_DIR>|$USER_MODEL_DIR|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
 
   if [[ "$OS" == "Linux" ]]; then
     systemctl --user daemon-reload
     systemctl --user enable $SERVICE_FILE
     systemctl --user start $SERVICE_FILE
   elif [[ "$OS" == "Darwin" ]]; then
-    sed -i "s|<WORKING_DIR>|$HOME|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
+    perl -pi -e "s|<WORKING_DIR>|$HOME|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
     launchctl load "$SERVICE_DESTINATION/$SERVICE_FILE"
   else
     echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
