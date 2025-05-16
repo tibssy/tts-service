@@ -25,3 +25,6 @@ interrupt_command = "__INTERRUPT__"
 
 # Whether to exit/restart the service when idle (to free up memory)
 exit_on_idle = true
+
+# Idle timeout in seconds before the service exits if exit_on_idle is true
+idle_timeout = 60

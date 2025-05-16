@@ -14,7 +14,6 @@ import gc
 import platform
 import tempfile
 
-
 CONFIG_PATH = os.environ.get('CONFIG_PATH', 'config/config.toml')
 MODEL_PATH = os.environ.get('MODEL_PATH', 'models/kokoro-v1.0.onnx')
 VOICES_PATH = os.environ.get('VOICES_PATH', 'models/voices-v1.0.bin')
@@ -43,6 +42,9 @@ class TextToSpeechPlayer:
         self.interrupt_flag = False
         self.should_exit = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+        self.idle_time = 0
+        self.max_idle_time = self.service_config.get('idle_timeout', 60)
+        self.has_generated_audio = False
 
     def set_voice(self):
         silent_mode = self.tts_config.get('silent_mode')
@@ -85,6 +87,8 @@ class TextToSpeechPlayer:
                 if sr != self.sample_rate:
                     print(f"Warning: Sample rate mismatch.  Model generated {sr}, but using {self.sample_rate}")
                 self.audio_queue.put((audio, sentence))
+                self.has_generated_audio = True
+
             except Exception as e:
                 print(f"Error generating audio for '{sentence}': {e}")
             finally:
@@ -96,13 +100,19 @@ class TextToSpeechPlayer:
                 with self.audio_queue.mutex:
                     self.audio_queue.queue.clear()
                 self.interrupt_flag = False
+                self.idle_time = 0
                 continue
 
             if self.audio_queue.empty() and not self.generating_audio:
                 self.kokoro = None
                 gc.collect()
                 time.sleep(1)
+                self.idle_time += 1
+                if self.service_config.get('exit_on_idle') and self.idle_time >= self.max_idle_time and self.has_generated_audio:
+                    self.should_exit = True
                 continue
+            else:
+                self.idle_time = 0
 
             try:
                 audio, sentence = self.audio_queue.get(timeout=1)
@@ -136,14 +146,13 @@ class TextToSpeechPlayer:
                         self.audio_queue.queue.clear()
                     self.interrupt_flag = False
 
-                if self.audio_queue.empty() and not self.generating_audio and self.service_config.get('exit_on_idle'):
-                    self.should_exit = True
-
     def start(self):
         self.is_running = True
         self.interrupt_flag = False
         self.future = self.executor.submit(self.read_and_process_fifo)
         self.executor.submit(self.play_audio)
+        self.idle_time = 0
+        self.has_generated_audio = False
 
     def read_and_process_fifo(self):
         try:
@@ -151,6 +160,7 @@ class TextToSpeechPlayer:
                 while self.is_running:
                     text = fifo.readline().strip()
                     if text:
+                        self.idle_time = 0
                         if text == self.service_config.get('interrupt_command'):
                             print("Interrupt signal received!")
                             self.interrupt_flag = True
@@ -220,6 +230,9 @@ def create_fifo(path):
 
 def main():
     config_data = load_config(CONFIG_PATH)
+    if config_data is None:
+        sys.exit(1)
+
     tts_config = config_data["kokoro"]
     service_config = config_data["service"]
     create_fifo(INPUT_FIFO_PATH)
@@ -234,7 +247,7 @@ def main():
         while True:
             time.sleep(1)
             if tts_player.should_exit:
-                print("Exiting TTS Player...")
+                print("Exiting TTS Player due to idle timeout...")
                 break
 
     except KeyboardInterrupt:
