@@ -10,7 +10,7 @@ KOKORO_ONNX_FILE="kokoro-v1.0.onnx"
 VOICES_BIN_FILE="voices-v1.0.bin"
 CONFIG_FILE="${SRC_DIR}/config/config.toml"
 OUTPUT_DIR="$SRC_DIR"
-
+TEST_MESSAGE="If you hear this message, the Kokoro-TTS installation was successful!"
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1
@@ -45,8 +45,8 @@ is_service_running() {
   if [[ "$OS" == "Linux" ]]; then
     $SERVICE_MANAGER --user is-active --quiet kokoro-tts.service
   elif [[ "$OS" == "Darwin" ]]; then
-      $SERVICE_MANAGER list com.github.tibssy.kokoro-tts > /dev/null 2>&1
-      return $?
+    $SERVICE_MANAGER list com.github.tibssy.kokoro-tts > /dev/null 2>&1
+    return $?
   else
     return 1
   fi
@@ -76,6 +76,14 @@ download_prebuilt_binary() {
 }
 
 builder() {
+  # Check for patchelf dependency on Linux before building
+  if [[ "$OS" == "Linux" ]]; then
+    if ! command_exists patchelf; then
+      echo -e "\e[31mError: patchelf is not installed. It is required to build from source on Linux.\nPlease install it and try again.\e[0m"
+      exit 1
+    fi
+  fi
+
   echo -e "\n\e[32mCreate virtual environment.\n******************************\e[0m\n"
   python3 -m venv "$VENV_DIR"
   source "$VENV_DIR/bin/activate"
@@ -90,7 +98,6 @@ builder() {
 
       echo -e "\n\e[32mInstall Requirements\n********************\e[0m"
       pip3 install -r requirements.txt
-      pip3 install --upgrade phonemizer-fork
       pip3 install nuitka
 
       echo -e "\n\e[32mBuild Binary\n************\e[0m"
@@ -195,7 +202,7 @@ handle_existing_installation() {
     case $action in
       "Stop service")
         if [[ "$OS" == "Linux" ]]; then
-          $SERVICE_MANAGER --user stop kokoro-tts.service
+          $SERVICE_MANAGER --user stop $SERVICE_FILE
         elif [[ "$OS" == "Darwin" ]]; then
           $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
         fi
@@ -204,9 +211,8 @@ handle_existing_installation() {
         ;;
       "Restart service")
         if [[ "$OS" == "Linux" ]]; then
-          $SERVICE_MANAGER --user restart kokoro-tts.service
+          $SERVICE_MANAGER --user restart $SERVICE_FILE
         elif [[ "$OS" == "Darwin" ]]; then
-          # launchctl stop is deprecated; stop only before start as a safeguard
           $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
           $SERVICE_MANAGER load "$SERVICE_DESTINATION/$SERVICE_FILE"
         fi
@@ -252,6 +258,7 @@ set_globals() {
       SHARED_LIB_EXT="so"
       SERVICE_FILE="kokoro-tts.service"
       SERVICE_DESTINATION="$HOME/.config/systemd/user"
+      FIFO_PATH="/run/user/$(id -u)/tts_input.fifo"
   elif [[ "$OS" == "Darwin" ]]; then
       if [[ "$ARCH" == "x86_64" ]]; then
           BINARY_NAME="kokoro-tts-macos-x64.bin"
@@ -268,9 +275,20 @@ set_globals() {
       SHARED_LIB_EXT="dylib"
       SERVICE_FILE="com.github.tibssy.kokoro-tts.plist"
       SERVICE_DESTINATION="$HOME/Library/LaunchAgents"
+      FIFO_PATH="$TMPDIR/tts_input.fifo"
   else
       echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
       exit 1
+  fi
+}
+
+post_install_service_check() {
+  if is_service_running; then
+    echo -e "\n\e[32mService is running. Sending test message...\e[0m\n"
+    echo "$TEST_MESSAGE" > "$FIFO_PATH"
+    echo -e "\e[32mTest message sent. Please listen for the confirmation message.\e[0m\n"
+  else
+    echo -e "\n\e[31mService is not running after installation. Please check the service logs for errors.\e[0m\n"
   fi
 }
 
@@ -310,3 +328,4 @@ done
 check_dependencies
 download_models
 install_files
+post_install_service_check
