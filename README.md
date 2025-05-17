@@ -200,9 +200,9 @@ Note: Ensure you have the necessary system audio libraries installed for soundde
        ```
    - **macOS:**
        ```commandline
-       mkdir -p "$HOME/Library/Application Support/kokoro-tts/models"
-       mkdir -p "$HOME/.local/bin" # Ensure this is in your $PATH
-       mkdir -p "$HOME/Library/LaunchAgents"
+       mkdir -p $HOME/Library/Application Support/kokoro-tts/models
+       mkdir -p $HOME/.local/bin # Ensure this is in your $PATH
+       mkdir -p $HOME/Library/LaunchAgents
        ```
 
 7. Copy files:
@@ -228,7 +228,7 @@ Edit $HOME/Library/LaunchAgents/com.github.tibssy.kokoro-tts.plist and replace p
         ``````
     - **macOS (launchd):**
         ```commandline
-        launchctl load "$HOME/Library/LaunchAgents/com.github.tibssy.kokoro-tts.plist"
+        launchctl load $HOME/Library/LaunchAgents/com.github.tibssy.kokoro-tts.plist
         ````````
 
 ---
@@ -291,41 +291,41 @@ Once the service is installed and running:
     - Write to the input FIFO. The service will read the line, generate speech, and play it.
     - **Linux:**
       ```commandline
-      echo "Hello, world from Linux!" > "/run/user/$(id -u)/tts_input.fifo"
+      echo "Hello, world from Linux!" > /run/user/$(id -u)/tts_input.fifo
       ```
     - **macOS:**
       ```commandline
-      echo "Hello, world from macOS!" > "$TMPDIR/tts_input.fifo"
+      echo "Hello, world from macOS!" > $TMPDIR/tts_input.fifo
       ```
     - Example using clipboard content (Wayland on Linux):
         ```commandline
-        wl-paste > "/run/user/$(id -u)/tts_input.fifo"
+        wl-paste > /run/user/$(id -u)/tts_input.fifo
         ```
     - On macOS, you can use pbpaste:
         ```commandline
-        pbpaste > "$TMPDIR/tts_input.fifo"
+        pbpaste > $TMPDIR/tts_input.fifo
         ```
 
 2. **Interrupt playback:**
     Write the configured interrupt_command (default: __INTERRUPT__) to the input FIFO. This stops current speech and clears the audio queue.
     - **Linux:**
       ```commandline
-      echo "__INTERRUPT__" > "/run/user/$(id -u)/tts_input.fifo"
+      echo "__INTERRUPT__" > /run/user/$(id -u)/tts_input.fifo
       ```
     - **macOS:**
       ```commandline
-      echo "__INTERRUPT__" > "$TMPDIR/tts_input.fifo"
+      echo "__INTERRUPT__" > $TMPDIR/tts_input.fifo
       ```
 
 3. **Monitor feedback (last spoken sentence):**
     Read from the output FIFO (on interruption).
     - **Linux:**
       ```commandline
-      cat "/run/user/$(id -u)/tts_output.fifo"
+      cat /run/user/$(id -u)/tts_output.fifo
       ```
     - **macOS:**
       ```commandline
-      cat "$TMPDIR/tts_output.fifo"
+      cat $TMPDIR/tts_output.fifo
       ```
       (Note: cat will block until something is written. You might need to run it in the background or a separate terminal.)
 
