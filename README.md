@@ -22,6 +22,12 @@ A simple background Text-to-Speech service built with Python and the `kokoro-onn
 
 https://github.com/user-attachments/assets/60423482-ab61-4676-b078-bc6b0468a983
 
+Silent Mode On:
+
+https://github.com/user-attachments/assets/1b08aa07-acb0-4d82-9939-07c4cddf9314
+
+
+
 ---
 
 ## Project Structure
