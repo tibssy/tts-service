@@ -26,6 +26,7 @@ phonemizer-fork==3.3.2
 protobuf==6.31.0
 pycparser==2.22
 pyparsing==3.2.3
+pysbd==0.3.4
 python-dateutil==2.9.0.post0
 rdflib==7.1.4
 referencing==0.36.2

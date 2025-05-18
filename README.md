@@ -305,7 +305,7 @@ Once the service is installed and running:
       ```
     - Example using clipboard content (Wayland on Linux):
         ```commandline
-        wl-paste > /run/user/$(id -u)/tts_input.fifo
+        wl-paste | tr '\n' ' ' > /run/user/$(id -u)/tts_input.fifo
         ```
     - On macOS, you can use pbpaste:
         ```commandline

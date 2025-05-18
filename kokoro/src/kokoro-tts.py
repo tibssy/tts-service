@@ -1,6 +1,5 @@
 import sounddevice as sd
 from kokoro_onnx import Kokoro
-import re
 import queue
 import time
 import os
@@ -13,6 +12,8 @@ import concurrent.futures
 import gc
 import platform
 import tempfile
+import pysbd
+
 
 CONFIG_PATH = os.environ.get('CONFIG_PATH', 'config/config.toml')
 MODEL_PATH = os.environ.get('MODEL_PATH', 'models/kokoro-v1.0.onnx')
@@ -67,8 +68,8 @@ class TextToSpeechPlayer:
     def generate_sentences(self, text):
         if not text:
             return
-        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-        for sentence in filter(None, sentences):
+        seg = pysbd.Segmenter(language="en", clean=True)
+        for sentence in seg.segment(text):
             yield sentence.strip()
 
     def generate_audio(self, sentences):
