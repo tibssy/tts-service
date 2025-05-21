@@ -18,24 +18,24 @@ command_exists() {
 
 check_dependencies() {
   if ! command_exists wget; then
-    echo -e "\e[31mError: wget is not installed. Please install it and try again.\e[0m"
+    printf "\e[31mError: wget is not installed. Please install it and try again.\e[0m\n"
     exit 1
   fi
 
   if ! command_exists curl; then
-    echo -e "\e[31mError: curl is not installed. Please install it and try again.\e[0m"
+    printf "\e[31mError: curl is not installed. Please install it and try again.\e[0m\n"
     exit 1
   fi
 
   if ! command_exists "$SERVICE_MANAGER"; then
     if [[ "$OS" == "Linux" ]]; then
-      echo -e "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m"
+      printf "\e[31mError: systemctl is not installed.  Systemd is required for service management.\e[0m\n"
       exit 1
     elif [[ "$OS" == "Darwin" ]]; then
-      echo -e "\e[31mError: launchctl is not installed.  Launchd is required for service management.\e[0m"
+      printf "\e[31mError: launchctl is not installed.  Launchd is required for service management.\e[0m\n"
       exit 1
     else
-      echo -e "\e[31mError: Unsupported OS.\e[0m"
+      printf "\e[31mError: Unsupported OS.\e[0m\n"
       exit 1
     fi
   fi
@@ -53,54 +53,54 @@ is_service_running() {
 }
 
 download_models() {
-  echo -e "\n\e[32mCreating models directory\n******************************\e[0m\n"
+  printf "\n\e[32mCreating models directory\n******************************\e[0m\n"
   mkdir -p "$MODEL_DIR"
-  echo -e "\n\e[32mDownloading model files\n******************************\e[0m\n"
+  printf "\n\e[32mDownloading model files\n******************************\e[0m\n"
   wget -O "$MODEL_DIR/$KOKORO_ONNX_FILE" "$KOKORO_ONNX_URL"
   wget -O "$MODEL_DIR/$VOICES_BIN_FILE" "$VOICES_BIN_URL"
 }
 
 download_prebuilt_binary() {
-  echo -e "\n\e[32mFetching latest prebuilt binary from GitHub...\n***********************************************\e[0m\n"
+  printf "\n\e[32mFetching latest prebuilt binary from GitHub...\n***********************************************\e[0m\n"
   API_URL="https://api.github.com/repos/tibssy/tts-service/releases/latest"
   DOWNLOAD_URL=$(curl -s "$API_URL" | grep "browser_download_url.*$BINARY_NAME" | cut -d '"' -f 4)
 
   if [ -z "$DOWNLOAD_URL" ]; then
-    echo -e "\e[31mError: Could not find download URL for binary.\e[0m"
+    printf "\e[31mError: Could not find download URL for binary.\e[0m\n"
     exit 1
   fi
 
   wget -O "$OUTPUT_DIR/$BINARY_NAME" "$DOWNLOAD_URL"
   chmod +x "$OUTPUT_DIR/$BINARY_NAME"
-  echo -e "\n\e[32mPrebuilt binary downloaded successfully.\n****************************************\e[0m\n"
+  printf "\n\e[32mPrebuilt binary downloaded successfully.\n****************************************\e[0m\n"
 }
 
 builder() {
   # Check for patchelf dependency on Linux before building
   if [[ "$OS" == "Linux" ]]; then
     if ! command_exists patchelf; then
-      echo -e "\e[31mError: patchelf is not installed. It is required to build from source on Linux.\nPlease install it and try again.\e[0m"
+      printf "\e[31mError: patchelf is not installed. It is required to build from source on Linux.\nPlease install it and try again.\e[0m\n"
       exit 1
     fi
   fi
 
-  echo -e "\n\e[32mCreate virtual environment.\n******************************\e[0m\n"
+  printf "\n\e[32mCreate virtual environment.\n******************************\e[0m\n"
   python3 -m venv "$VENV_DIR"
   source "$VENV_DIR/bin/activate"
   if [ -n "$VIRTUAL_ENV" ]; then
-      echo -e "\n\e[32mVirtual environment is active.\n******************************\e[0m\n"
-      echo -e "\e[32mPip Upgrade\n***********\e[0m"
+      printf "\n\e[32mVirtual environment is active.\n******************************\e[0m\n"
+      printf "\e[32mPip Upgrade\n***********\e[0m\n"
       pip3 install --upgrade pip
 
       # Dynamically determine Python version
       PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
       SITE_PACKAGES="$VENV_DIR/lib/python${PYTHON_VERSION}/site-packages"
 
-      echo -e "\n\e[32mInstall Requirements\n********************\e[0m"
+      printf "\n\e[32mInstall Requirements\n********************\e[0m\n"
       pip3 install -r requirements.txt
       pip3 install nuitka
 
-      echo -e "\n\e[32mBuild Binary\n************\e[0m"
+      printf "\n\e[32mBuild Binary\n************\e[0m\n"
       nuitka --onefile \
              --output-dir="$OUTPUT_DIR" \
              --output-filename="$BINARY_NAME" \
@@ -116,18 +116,18 @@ builder() {
              "$SRC_DIR/kokoro-tts.py"
       deactivate
       if [ "$?" -ne 0 ]; then
-        echo -e "\e[33mNuitka encountered an error.\e[0m"
+        printf "\e[33mNuitka encountered an error.\e[0m\n"
       else
-        echo -e "\n\e[32mNuitka finished successfully.\n**********************************\e[0m"
+        printf "\n\e[32mNuitka finished successfully.\n**********************************\e[0m\n"
       fi
   else
       echo "Virtual environment is not active."
-      exit;
+      exit 1
   fi
 }
 
 install_files() {
-  echo -e "\n\e[32mInstalling files to user directories\n****************************************\e[0m\n"
+  printf "\n\e[32mInstalling files to user directories\n****************************************\e[0m\n"
 
   # copy config
   mkdir -p "$USER_CONFIG_DIR"
@@ -160,15 +160,15 @@ install_files() {
     perl -pi -e "s|<WORKING_DIR>|$HOME|g" "$SERVICE_DESTINATION/$SERVICE_FILE"
     $SERVICE_MANAGER load "$SERVICE_DESTINATION/$SERVICE_FILE"
   else
-    echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
+    printf "\e[31mError: Unsupported operating system: %s\e[0m\n" "$OS"
     exit 1
   fi
 
-  echo -e "\n\e[32mInstallation complete!\n*************************\e[0m\n"
+  printf "\n\e[32mInstallation complete!\n*************************\e[0m\n"
 }
 
 uninstall_service() {
-  echo -e "\n\e[33mUninstalling Kokoro-TTS service...\e[0m\n"
+  printf "\n\e[33mUninstalling Kokoro-TTS service...\e[0m\n"
 
   if [[ "$OS" == "Linux" ]]; then
     $SERVICE_MANAGER --user stop kokoro-tts.service
@@ -179,23 +179,23 @@ uninstall_service() {
     $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
     rm -f "$SERVICE_DESTINATION/$SERVICE_FILE"
   else
-    echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
+    printf "\e[31mError: Unsupported operating system: %s\e[0m\n" "$OS"
     exit 1
   fi
 
   rm -f "$USER_BINARY"
   rm -rf "$USER_CONFIG_DIR"
   rm -rf "$USER_MODEL_DIR"
-  echo -e "\e[32mKokoro-TTS service uninstalled successfully.\e[0m\n"
+  printf "\e[32mKokoro-TTS service uninstalled successfully.\e[0m\n"
 }
 
 handle_existing_installation() {
-  echo -e "\n\e[33mKokoro-TTS appears to be already installed.\e[0m\n"
+  printf "\n\e[33mKokoro-TTS appears to be already installed.\e[0m\n"
 
   if is_service_running; then
-    echo -e "\e[32mThe service is currently running.\e[0m"
+    printf "\e[32mThe service is currently running.\e[0m\n"
   else
-    echo -e "\e[31mThe service is currently stopped.\e[0m"
+    printf "\e[31mThe service is currently stopped.\e[0m\n"
   fi
 
   select action in "Stop service" "Restart service" "Uninstall service" "Exit"; do
@@ -206,7 +206,7 @@ handle_existing_installation() {
         elif [[ "$OS" == "Darwin" ]]; then
           $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
         fi
-        echo -e "\e[32mService stopped.\e[0m\n"
+        printf "\e[32mService stopped.\e[0m\n"
         break
         ;;
       "Restart service")
@@ -216,7 +216,7 @@ handle_existing_installation() {
           $SERVICE_MANAGER unload "$SERVICE_DESTINATION/$SERVICE_FILE" 2>/dev/null || true
           $SERVICE_MANAGER load "$SERVICE_DESTINATION/$SERVICE_FILE"
         fi
-        echo -e "\e[32mService restarted.\e[0m\n"
+        printf "\e[32mService restarted.\e[0m\n"
         break
         ;;
       "Uninstall service")
@@ -224,11 +224,11 @@ handle_existing_installation() {
         break
         ;;
       "Exit")
-        echo -e "\e[32mExiting.\e[0m\n"
+        printf "\e[32mExiting.\e[0m\n"
         exit 0
         ;;
       *)
-        echo -e "\e[31mInvalid option.\e[0m"
+        printf "\e[31mInvalid option.\e[0m\n"
         ;;
     esac
   done
@@ -238,9 +238,10 @@ set_globals() {
   OS=$(uname -s)
   ARCH=$(uname -m)
 
-  echo -e "\n\e[34mSystem Information:\e[0m"
-  echo -e "\e[32mOperating System: ${OS}\e[0m"
-  echo -e "\e[32mArchitecture: ${ARCH}\e[0m\n"
+  printf "\n\e[34mSystem Information:\e[0m\n"
+  printf "\e[32mOperating System: %s\e[0m\n" "$OS"
+  printf "\e[32mArchitecture: %s\e[0m\n" "$ARCH"
+
 
   if [[ "$OS" == "Linux" ]]; then
       if [[ "$ARCH" == "x86_64" ]]; then
@@ -248,7 +249,7 @@ set_globals() {
       elif [[ "$ARCH" == "aarch64" ]]; then
           BINARY_NAME="kokoro-tts-linux-arm64.bin"
       else
-          echo -e "\e[31mError: Unsupported Linux architecture: $ARCH\e[0m"
+          printf "\e[31mError: Unsupported Linux architecture: %s\e[0m\n" "$ARCH"
           exit 1
       fi
       USER_CONFIG_DIR="$HOME/.config/kokoro-tts"
@@ -265,7 +266,7 @@ set_globals() {
       elif [[ "$ARCH" == "arm64" ]]; then
           BINARY_NAME="kokoro-tts-macos-arm64.bin"
       else
-          echo -e "\e[31mError: Unsupported macOS architecture: $ARCH\e[0m"
+          printf "\e[31mError: Unsupported macOS architecture: %s\e[0m\n" "$ARCH"
           exit 1
       fi
       USER_CONFIG_DIR="$HOME/Library/Application Support/kokoro-tts"
@@ -277,28 +278,28 @@ set_globals() {
       SERVICE_DESTINATION="$HOME/Library/LaunchAgents"
       FIFO_PATH="$TMPDIR/tts_input.fifo"
   else
-      echo -e "\e[31mError: Unsupported operating system: $OS\e[0m"
-      exit 1
+    printf "\e[31mError: Unsupported operating system: %s\e[0m\n" "$OS"
+    exit 1
   fi
 }
 
 post_install_service_check() {
   if is_service_running; then
-    echo -e "\n\e[32mService is running. Sending test message...\e[0m\n"
+    printf "\n\e[32mService is running. Sending test message...\e[0m\n"
     echo "$TEST_MESSAGE" > "$FIFO_PATH"
-    echo -e "\e[32mTest message sent. Please listen for the confirmation message.\e[0m\n"
+    printf "\e[32mTest message sent. Please listen for the confirmation message.\e[0m\n"
   else
-    echo -e "\n\e[31mService is not running after installation. Please check the service logs for errors.\e[0m\n"
+    printf "\n\e[31mService is not running after installation. Please check the service logs for errors.\e[0m\n"
   fi
 }
 
 
-echo -e "\n\e[34m==============================================="
-echo -e "  Welcome to Kokoro-TTS service Installer"
-echo -e "===============================================\e[0m"
-echo -e "\e[36mThis script will install Kokoro-TTS — a background"
-echo -e "text-to-speech service powered by Kokoro ONNX models.\e[0m"
-echo -e "\n\e[32mLet's get started!\e[0m\n"
+printf "\n\e[34m===============================================\n"
+printf "  Welcome to Kokoro-TTS service Installer\n"
+printf "===============================================\e[0m\n"
+printf "\e[36mThis script will install Kokoro-TTS — a background\n"
+printf "text-to-speech service powered by Kokoro ONNX models.\e[0m\n"
+printf "\n\e[32mLet's get started!\e[0m\n"
 
 set_globals
 
@@ -308,7 +309,7 @@ if [ -f "$USER_BINARY" ]; then
   exit 0
 fi
 
-echo -e "\n\e[36mDo you want to build from source or use the prebuilt binary?\e[0m"
+printf "\n\e[36mDo you want to build from source or use the prebuilt binary?\e[0m\n"
 select choice in "Build from source" "Use prebuilt binary"; do
   case $REPLY in
     1)
@@ -320,7 +321,7 @@ select choice in "Build from source" "Use prebuilt binary"; do
       break
       ;;
     *)
-      echo -e "\e[31mInvalid option. Please choose 1 or 2.\e[0m"
+      printf "\e[31mInvalid option. Please choose 1 or 2.\e[0m\n"
       ;;
   esac
 done
