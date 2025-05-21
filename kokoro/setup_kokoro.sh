@@ -10,7 +10,7 @@ KOKORO_ONNX_FILE="kokoro-v1.0.onnx"
 VOICES_BIN_FILE="voices-v1.0.bin"
 CONFIG_FILE="${SRC_DIR}/config/config.toml"
 OUTPUT_DIR="$SRC_DIR"
-TEST_MESSAGE="If you hear this message, the Kokoro-TTS installation was successful!"
+TEST_MESSAGE="If you hear this message, the Kokoro-TTS installation was successful"
 
 command_exists() {
   command -v "$1" >/dev/null 2>&1

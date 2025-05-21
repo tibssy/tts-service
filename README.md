@@ -297,11 +297,11 @@ Once the service is installed and running:
     - Write to the input FIFO. The service will read the line, generate speech, and play it.
     - **Linux:**
       ```commandline
-      echo "Hello, world from Linux!" > /run/user/$(id -u)/tts_input.fifo
+      echo "Hello, world from Linux" > /run/user/$(id -u)/tts_input.fifo
       ```
     - **macOS:**
       ```commandline
-      echo "Hello, world from macOS!" > $TMPDIR/tts_input.fifo
+      echo "Hello, world from macOS" > $TMPDIR/tts_input.fifo
       ```
     - Example using clipboard content (Wayland on Linux):
         ```commandline
